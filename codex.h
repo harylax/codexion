@@ -5,12 +5,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 
 typedef enum s_scheduler
 {
 	FIFO,
 	EDF,
 }	t_scheduler;
+
+typedef enum s_state
+{
+	COMPILING,
+	DEBUGGING,
+	REFACTORING,
+	BURNED_OUT
+}	t_state;
 
 typedef struct s_arg
 {
@@ -24,22 +33,37 @@ typedef struct s_arg
 	t_scheduler scheduler;
 }	t_arg;
 
+typedef struct s_sim t_sim;
+
 typedef struct s_dongle
 {
-	int	owner;
-	int user;
-	int cooldown;
+	int	id;
+	pthread_mutex_t mut;
+	int available;
+	int cooling_down;
 }	t_dongle;
 
 typedef struct s_coder
 {
 	int			id;
+	pthread_t	thread;
 	int			compilations_done;
-	int			is_compiling;
-	int			is_debugging;
-	int			is_refactoring;
-	int			burned_out;
-	t_dongle	dongle;
+	t_state		state;
+	t_dongle	*left;
+	t_dongle	*right;
+	t_sim		*sim;
 }	t_coder;
+
+typedef struct s_sim
+{
+	int	running;
+	t_dongle *dongles;
+	t_coder	*coders;
+	t_arg	*args;
+}	t_sim;
+
+int missing_args(int ac);
+int check_args(int ac, char **av);
+void parse_args(t_arg *args, char **av);
 
 #endif
