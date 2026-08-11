@@ -15,9 +15,7 @@ typedef enum s_scheduler
 
 typedef enum s_state
 {
-	COMPILING,
-	DEBUGGING,
-	REFACTORING,
+	DONE,
 	BURNED_OUT
 }	t_state;
 
@@ -39,8 +37,8 @@ typedef struct s_dongle
 {
 	int	id;
 	pthread_mutex_t mut;
+	pthread_cond_t	cond;
 	int available;
-	int cooling_down;
 }	t_dongle;
 
 typedef struct s_coder
