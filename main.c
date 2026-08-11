@@ -6,11 +6,16 @@ void *coder_routine(void *arg)
 	int count_to_burnout = 0;
 	while (1)
 	{
-		while (coder->left->available && coder->right->available)
+		pthread_mutex_lock(&coder->left->mut);
+		pthread_mutex_lock(&coder->right->mut);
+		while (!coder->left->available && !coder->right->available)
 		{
 			pthread_cond_wait(&coder->left->cond, &coder->left->mut);
 			pthread_cond_wait(&coder->right->cond, &coder->right->mut);
 		}
+		pthread_mutex_unlock(&coder->left->mut);
+		pthread_mutex_unlock(&coder->right->mut);
+	
 		// COMPILATION
 		// compilation lock
 		pthread_mutex_lock(&coder->left->mut);
@@ -29,6 +34,11 @@ void *coder_routine(void *arg)
 		if (coder->compilations_done >= coder->sim->args->number_of_compiles_required)
 		{
 			coder->state = DONE;
+			coder->left->available = 1;
+			coder->right->available = 1;
+			// signal the other
+			pthread_cond_broadcast(&coder->left->cond);
+			pthread_cond_broadcast(&coder->right->cond);
 			printf("%d has finished", coder->id);
 			break;
 		}
@@ -47,6 +57,10 @@ void *coder_routine(void *arg)
 		pthread_mutex_unlock(&coder->left->mut);
 		pthread_mutex_unlock(&coder->right->mut);
 		// unlock
+
+		// signal the other
+		pthread_cond_broadcast(&coder->left->cond);
+		pthread_cond_broadcast(&coder->right->cond);
 		
 		// REFACTORING
 		printf("%d is refactoring\n", coder->id);
@@ -95,6 +109,8 @@ int main(int ac, char **av)
 	i = 0;
 	while (i < args.number_of_coders)
 	{
+		pthread_mutex_init(&sim.coders[i].left->mut, NULL);
+		pthread_mutex_init(&sim.coders[i].right->mut, NULL);
 		pthread_create(&sim.coders[i].thread, NULL, coder_routine, &sim.coders[i]);
 		i++;
 	}
@@ -103,12 +119,14 @@ int main(int ac, char **av)
 	while (i < args.number_of_coders)
 	{
 		pthread_join(sim.coders[i].thread, NULL);
-		if (sim.coders->state == BURNED_OUT)
+		if (sim.coders[i].state == BURNED_OUT)
 		{
 			free(sim.coders);
 			free(sim.dongles);
 			return (1);
 		}
+		pthread_mutex_destroy(&sim.coders[i].left->mut);
+		pthread_mutex_destroy(&sim.coders[i].right->mut);
 		i++;
 	}
 
