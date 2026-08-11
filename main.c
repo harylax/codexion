@@ -109,12 +109,24 @@ int main(int ac, char **av)
 	i = 0;
 	while (i < args.number_of_coders)
 	{
-		pthread_mutex_init(&sim.coders[i].left->mut, NULL);
-		pthread_mutex_init(&sim.coders[i].right->mut, NULL);
-		pthread_create(&sim.coders[i].thread, NULL, coder_routine, &sim.coders[i]);
+		pthread_mutex_init(&sim.dongles->mut, NULL);
 		i++;
 	}
 
+	i = 0;
+	while (i < args.number_of_coders)
+	{
+		pthread_cond_init(&sim.dongles[i].cond, NULL);
+		i++;
+	}
+	
+	i = 0;
+	while (i < args.number_of_coders)
+	{
+		pthread_create(&sim.coders[i].thread, NULL, coder_routine, &sim.coders[i]);
+		i++;
+	}
+	
 	i = 0;
 	while (i < args.number_of_coders)
 	{
@@ -125,11 +137,22 @@ int main(int ac, char **av)
 			free(sim.dongles);
 			return (1);
 		}
-		pthread_mutex_destroy(&sim.coders[i].left->mut);
-		pthread_mutex_destroy(&sim.coders[i].right->mut);
 		i++;
 	}
+	i = 0;
+	while (i < args.number_of_coders)
+	{
+		pthread_mutex_destroy(&sim.dongles->mut);
+		i++;
+	}
+	i = 0;
 
+	while (i < args.number_of_coders)
+	{
+		pthread_cond_destroy(&sim.dongles->cond);
+		i++;
+	}
+	
 	free(sim.coders);
 	free(sim.dongles);
 	return (0);
