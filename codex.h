@@ -15,6 +15,7 @@ typedef enum s_scheduler
 
 typedef enum s_state
 {
+	WORKING,
 	DONE,
 	BURNED_OUT
 }	t_state;
@@ -36,9 +37,10 @@ typedef struct s_sim t_sim;
 typedef struct s_dongle
 {
 	int	id;
-	pthread_mutex_t mut;
-	pthread_cond_t	cond;
+	pthread_t thread;
 	int available;
+	int hot;
+	t_sim *sim;
 }	t_dongle;
 
 typedef struct s_coder
@@ -58,6 +60,8 @@ typedef struct s_sim
 	t_dongle *dongles;
 	t_coder	*coders;
 	t_arg	*args;
+	pthread_mutex_t mut;
+	pthread_cond_t	cond;
 }	t_sim;
 
 int missing_args(int ac);
