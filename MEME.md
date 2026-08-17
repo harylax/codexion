@@ -842,3 +842,398 @@ gettimeofday → 🕐 « Donne-moi l'heure actuelle. »
 usleep → 😴 « Fais dormir ce thread pendant un certain temps. »
 
 Et surtout, dans un programme multithread, pthread_cond_timedwait + mutex + condition variable est le mécanisme de synchronisation, alors que usleep est simplement une temporisation.
+
+## 3.1. Comprendre `timeval`, l'epoch et les unités de temps
+
+Quand on utilise :
+
+```c
+struct timeval now;
+
+gettimeofday(&now, NULL);
+```
+
+on obtient un instant représenté par deux valeurs :
+
+```c
+struct timeval {
+    time_t      tv_sec;
+    suseconds_t tv_usec;
+};
+```
+
+### 🔹 `tv_sec`
+
+`tv_sec` représente le nombre de **secondes écoulées depuis l'epoch Unix**.
+
+L'epoch Unix correspond au :
+
+```text
+1er janvier 1970 à 00:00:00 UTC
+```
+
+Donc `tv_sec` est une valeur relativement grande.
+
+Par exemple, conceptuellement :
+
+```text
+tv_sec = 1 780 000 000
+```
+
+signifie qu'environ 1,78 milliard de secondes se sont écoulées depuis l'epoch.
+
+Cependant, lorsqu'on veut mesurer une durée, on ne s'intéresse généralement pas à cette grande valeur directement.
+
+On fait plutôt :
+
+```c
+now.tv_sec - start.tv_sec
+```
+
+Ce qui donne le nombre de secondes écoulées entre deux instants.
+
+---
+
+### 🔹 `tv_usec`
+
+`tv_usec` représente les **microsecondes supplémentaires à l'intérieur de la seconde courante**.
+
+Il ne représente donc PAS le nombre total de microsecondes depuis l'epoch.
+
+Par exemple :
+
+```text
+tv_sec  = 100
+tv_usec = 250000
+```
+
+signifie :
+
+```text
+100 secondes + 250000 microsecondes
+```
+
+soit :
+
+```text
+100,25 secondes
+```
+
+On peut donc visualiser `timeval` comme :
+
+```text
+                    instant
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+         secondes          fraction de seconde
+         tv_sec                tv_usec
+             │                   │
+        100 secondes        250000 µs
+             └─────────┬─────────┘
+                       │
+                  100,25 secondes
+```
+
+`tv_usec` est donc toujours la partie fractionnaire de la seconde, généralement comprise entre :
+
+```text
+0 et 999999 µs
+```
+
+---
+
+### 🔹 Pourquoi `* 1000` puis `/ 1000` ?
+
+Dans notre programme, on souhaite généralement travailler en **millisecondes**.
+
+Les unités sont liées ainsi :
+
+```text
+1 seconde      = 1000 millisecondes
+1 milliseconde = 1000 microsecondes
+1 seconde      = 1000000 microsecondes
+```
+
+Pour convertir les secondes en millisecondes :
+
+```c
+seconds * 1000
+```
+
+Pour convertir les microsecondes en millisecondes :
+
+```c
+microseconds / 1000
+```
+
+Ainsi :
+
+```c
+elapsed = (now.tv_sec - start.tv_sec) * 1000;
+elapsed += (now.tv_usec - start.tv_usec) / 1000;
+```
+
+signifie :
+
+```text
+partie en secondes
+        ↓
+      × 1000
+        ↓
+millisecondes
+
+        +
+
+partie en microsecondes
+        ↓
+      ÷ 1000
+        ↓
+millisecondes
+```
+
+On additionne ensuite les deux parties.
+
+---
+
+### 🧠 Exemple
+
+Supposons :
+
+```text
+start:
+    tv_sec  = 100
+    tv_usec = 200000
+
+now:
+    tv_sec  = 103
+    tv_usec = 700000
+```
+
+La différence est :
+
+```text
+3 secondes + 500000 microsecondes
+```
+
+Conversion :
+
+```text
+3 × 1000 = 3000 ms
+
+500000 / 1000 = 500 ms
+```
+
+Donc :
+
+```text
+elapsed = 3000 + 500
+        = 3500 ms
+```
+
+Il s'est donc écoulé :
+
+```text
+3,5 secondes
+```
+
+---
+
+### ⚠️ `tv_usec` ne contient pas les secondes converties en microsecondes
+
+C'est une confusion importante.
+
+On pourrait imaginer :
+
+```text
+tv_sec = 10
+tv_usec = 10000000
+```
+
+pour représenter 10 secondes en microsecondes.
+
+Ce n'est pas ce que fait `timeval`.
+
+La représentation correcte est :
+
+```text
+tv_sec  = 10
+tv_usec = 0
+```
+
+pour exactement 10 secondes.
+
+Et :
+
+```text
+tv_sec  = 10
+tv_usec = 250000
+```
+
+pour 10,25 secondes.
+
+Autrement dit :
+
+```text
+tv_sec  → partie entière en secondes
+tv_usec → partie fractionnaire de cette seconde
+```
+
+---
+
+### 🔹 Pourquoi `tv_sec` peut être une grande valeur sans problème ?
+
+`tv_sec` utilise le type `time_t`, qui est conçu pour représenter des timestamps.
+
+Sur les systèmes modernes 64 bits, `time_t` est généralement suffisamment grand pour représenter des timestamps sur une très grande période.
+
+Le fait que `tv_sec` soit une grande valeur n'est donc pas un problème en pratique.
+
+De plus, pour mesurer une durée, on soustrait deux timestamps :
+
+```c
+now.tv_sec - start.tv_sec
+```
+
+Par exemple :
+
+```text
+now.tv_sec   = 1786000123
+start.tv_sec = 1786000100
+```
+
+donne simplement :
+
+```text
+23 secondes
+```
+
+On ne travaille donc pas directement avec la valeur absolue du timestamp, mais avec la différence entre deux timestamps.
+
+---
+
+### 🔹 Timestamp vs durée
+
+Il faut bien distinguer les deux concepts.
+
+Un **timestamp** représente un instant précis :
+
+```text
+"Quelle heure est-il ?"
+```
+
+Par exemple :
+
+```text
+1786000123 secondes depuis l'epoch
+```
+
+Une **durée** représente le temps entre deux instants :
+
+```text
+"Combien de temps s'est écoulé ?"
+```
+
+On l'obtient en faisant :
+
+```text
+timestamp_fin - timestamp_début
+```
+
+C'est exactement ce que fait notre fonction :
+
+```c
+get_timestamp_ms(sim)
+```
+
+Elle transforme la différence entre deux instants en une durée exprimée en millisecondes.
+
+---
+
+### 🔹 `gettimeofday()` et `usleep()` n'utilisent pas la même unité
+
+`gettimeofday()` fournit :
+
+```text
+tv_sec  → secondes
+tv_usec → microsecondes
+```
+
+Alors que :
+
+```c
+usleep(...)
+```
+
+attend une durée exprimée en **microsecondes**.
+
+Si notre programme manipule une durée en millisecondes :
+
+```c
+long duration_ms = 100;
+```
+
+il faut la convertir avant d'utiliser `usleep()` :
+
+```c
+usleep(duration_ms * 1000);
+```
+
+car :
+
+```text
+100 ms × 1000 = 100000 µs
+```
+
+Donc :
+
+```c
+usleep(100000);
+```
+
+correspond à environ :
+
+```text
+100 ms
+```
+
+On peut donc garder une convention simple dans le programme :
+
+```text
+Mesure interne       → millisecondes
+get_timestamp_ms()   → retourne des millisecondes
+usleep()             → conversion ms → µs uniquement lors de l'appel
+```
+
+---
+
+### 🎯 À retenir
+
+```text
+Epoch
+  ↓
+1er janvier 1970
+
+gettimeofday()
+  ↓
+struct timeval
+  ├── tv_sec  → secondes depuis l'epoch
+  └── tv_usec → microsecondes dans la seconde courante
+
+Pour mesurer une durée :
+  ↓
+fin - début
+
+Pour obtenir des millisecondes :
+  ↓
+secondes × 1000
+microsecondes ÷ 1000
+
+usleep()
+  ↓
+prend des microsecondes
+```
+
+La règle mentale la plus importante est :
+
+> **`tv_sec` donne la partie entière du temps en secondes, tandis que `tv_usec` donne la fraction de cette seconde en microsecondes.**
