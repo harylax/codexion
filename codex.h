@@ -6,6 +6,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 typedef enum s_scheduler
 {
@@ -64,6 +65,8 @@ typedef struct s_sim
 	t_arg	*args;
 	pthread_mutex_t mutex;
 	pthread_cond_t	cond;
+	struct timeval start_time;
+	pthread_mutex_t log_mutex;
 }	t_sim;
 
 int missing_args(int ac);
