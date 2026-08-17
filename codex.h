@@ -33,6 +33,7 @@ typedef struct s_arg
 }	t_arg;
 
 typedef struct s_sim t_sim;
+typedef struct s_coder t_coder;
 
 typedef struct s_dongle
 {
@@ -40,6 +41,7 @@ typedef struct s_dongle
 	pthread_t thread;
 	int available;
 	int hot;
+	t_coder *users[2];
 	t_sim *sim;
 }	t_dongle;
 
@@ -60,7 +62,7 @@ typedef struct s_sim
 	t_dongle *dongles;
 	t_coder	*coders;
 	t_arg	*args;
-	pthread_mutex_t mut;
+	pthread_mutex_t mutex;
 	pthread_cond_t	cond;
 }	t_sim;
 
