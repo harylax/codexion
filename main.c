@@ -11,6 +11,42 @@ long get_timestamp_ms(t_sim *sim)
 	return elapsed;
 }
 
+t_request *create_request(t_coder *coder)
+{
+	long time_to_burnout = (long)coder->sim->args->time_to_burnout;
+	long arrival = get_timestamp_ms(coder->sim);
+	long deadline = coder->last_compile_start + time_to_burnout;
+	t_request *request = malloc(sizeof(t_request));
+	if (!request)
+		return (NULL);
+	request->arrival = arrival;
+	request->deadline = deadline;
+	request->coder = coder;
+	request->next = NULL;
+	return (request);
+}
+
+void heap_push(t_coder *coder)
+{
+	t_request *request = create_request(coder);
+	t_heap *heap = coder->sim->queue->head;
+	if (coder->sim->args->scheduler == FIFO)
+	{
+		if (heap)
+		{
+			while (heap->head->next)
+				heap->head = heap->head->next;
+			heap->head->next = request;
+		}
+		else
+			heap->head = request;
+	}
+	if (coder->sim->args->scheduler == EDF)
+	{
+		// chercher la requete avec le deadline <
+	}
+}
+
 void *coder_routine(void *arg)
 {
 	t_coder *coder = (t_coder *)arg;
@@ -29,9 +65,14 @@ void *coder_routine(void *arg)
 	while (1)
 	{
 		pthread_mutex_lock(&coder->sim->mutex);
-		while (first->available == 0)
+		heap_push(&coder->sim->queue);
+		// if fifo: compute now - start_time
+		// if edf: compute deadline = last_compile_start + time_to_burnout
+		// add the coder to the priority queue of first
+		while (first->available == 0) // check priority
 			pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
 		first->available = 0;
+		// pop coder from the priority queue
 		pthread_mutex_lock(&coder->sim->log_mutex);
 		printf("time: %ld, coder %d has taken dongle %d\n", get_timestamp_ms(coder->sim), coder->id, first->id);
 		pthread_mutex_unlock(&coder->sim->log_mutex);
@@ -48,7 +89,7 @@ void *coder_routine(void *arg)
 		pthread_mutex_unlock(&coder->sim->log_mutex);
 		usleep(coder->sim->args->time_to_compile * 1000);
 		coder->compilations_done++;
-		// restart time_to_burnout counter
+		// change last_compile_start
 		pthread_mutex_lock(&coder->sim->mutex);
 		first->hot = 1;
 		second->hot = 1;			

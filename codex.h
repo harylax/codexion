@@ -38,12 +38,12 @@ typedef struct s_coder t_coder;
 
 typedef struct s_dongle
 {
-	int	id;
-	pthread_t thread;
-	int available;
-	int hot;
-	t_coder *users[2];
-	t_sim *sim;
+	int			id;
+	pthread_t 	thread;
+	int 		available;
+	int 		hot;
+	t_coder 	*users[2];
+	t_sim 		*sim;
 }	t_dongle;
 
 typedef struct s_coder
@@ -51,22 +51,37 @@ typedef struct s_coder
 	int			id;
 	pthread_t	thread;
 	int			compilations_done;
+	long		last_compile_start;
 	t_state		state;
 	t_dongle	*left;
 	t_dongle	*right;
 	t_sim		*sim;
 }	t_coder;
 
+typedef struct s_request
+{
+	t_coder 			*coder;
+	long 				arrival;
+	long 				deadline;
+	struct s_request 	*next;
+}	t_request;
+
+typedef struct s_heap
+{
+	t_request *head;
+}	t_heap;
+
 typedef struct s_sim
 {
-	int	running;
-	t_dongle *dongles;
-	t_coder	*coders;
-	t_arg	*args;
+	int				running;
+	t_dongle 		*dongles;
+	t_coder			*coders;
+	t_arg			*args;
 	pthread_mutex_t mutex;
 	pthread_cond_t	cond;
-	struct timeval start_time;
+	struct timeval 	start_time;
 	pthread_mutex_t log_mutex;
+	t_heap 			*queue;
 }	t_sim;
 
 int missing_args(int ac);
