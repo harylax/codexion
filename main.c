@@ -26,25 +26,32 @@ t_request *create_request(t_coder *coder)
 	return (request);
 }
 
-void heap_push(t_coder *coder)
+void heap_push(t_coder *coder, t_heap *heap)
 {
 	t_request *request = create_request(coder);
-	t_heap *heap = coder->sim->queue->head;
+	//t_heap *heap = coder->sim->queue->head;
+	if (!heap)
+		heap->head = request;
 	if (coder->sim->args->scheduler == FIFO)
 	{
-		if (heap)
-		{
-			while (heap->head->next)
-				heap->head = heap->head->next;
-			heap->head->next = request;
-		}
-		else
-			heap->head = request;
+		while (heap->head->next)
+			heap->head = heap->head->next;
+		heap->head->next = request;
 	}
 	if (coder->sim->args->scheduler == EDF)
 	{
-		// chercher la requete avec le deadline <
+		while (heap->head->next && heap->head->deadline > request->deadline)
+			heap->head = heap->head->next;
+		heap->head->next = request;
 	}
+}
+
+void heap_pop(t_heap *heap)
+{
+	if (!heap)
+		return;
+	heap->head = heap->head->next;
+	heap->head->next = NULL;
 }
 
 void *coder_routine(void *arg)
@@ -65,18 +72,18 @@ void *coder_routine(void *arg)
 	while (1)
 	{
 		pthread_mutex_lock(&coder->sim->mutex);
-		heap_push(&coder->sim->queue);
+		heap_push(coder, coder->sim->queue);
 		// if fifo: compute now - start_time
 		// if edf: compute deadline = last_compile_start + time_to_burnout
 		// add the coder to the priority queue of first
-		while (first->available == 0) // check priority
+		while (first->available == 0 && coder == coder->sim->queue->head->coder) // check priority
 			pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
 		first->available = 0;
 		// pop coder from the priority queue
 		pthread_mutex_lock(&coder->sim->log_mutex);
 		printf("time: %ld, coder %d has taken dongle %d\n", get_timestamp_ms(coder->sim), coder->id, first->id);
 		pthread_mutex_unlock(&coder->sim->log_mutex);
-		while (second->available == 0)
+		while (second->available == 0 && coder == coder->sim->queue->head->coder)
 			pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
 		second->available = 0;		
 		pthread_mutex_lock(&coder->sim->log_mutex);
@@ -236,6 +243,10 @@ int main(int ac, char **av)
 	t_sim sim;
 	gettimeofday(&sim.start_time, NULL);
 	sim.args = &args;
+	sim.queue = malloc(sizeof(t_heap));
+	if (!sim.queue)
+		return (1);
+	sim.queue->head = NULL;
 	sim.coders = malloc(args.number_of_coders * sizeof(t_coder));
 	sim.dongles = malloc(args.number_of_coders * sizeof(t_dongle));
 
