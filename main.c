@@ -11,47 +11,55 @@ long get_timestamp_ms(t_sim *sim)
 	return elapsed;
 }
 
-t_request *create_request(t_coder *coder)
+t_request create_request(t_coder *coder)
 {
 	long time_to_burnout = (long)coder->sim->args->time_to_burnout;
 	long arrival = get_timestamp_ms(coder->sim);
 	long deadline = coder->last_compile_start + time_to_burnout;
-	t_request *request = malloc(sizeof(t_request));
-	if (!request)
-		return (NULL);
-	request->arrival = arrival;
-	request->deadline = deadline;
-	request->coder = coder;
-	request->next = NULL;
+	t_request request;
+	request.arrival = arrival;
+	request.deadline = deadline;
+	request.coder = coder;
 	return (request);
 }
 
 void heap_push(t_coder *coder, t_heap *heap)
 {
-	t_request *request = create_request(coder);
-	//t_heap *heap = coder->sim->queue->head;
-	if (!heap)
-		heap->head = request;
+	t_request request = create_request(coder);
+	if (heap->size == 0)
+	{
+		heap->queue[0] = request;
+		heap->size++;
+		return ;
+	}
 	if (coder->sim->args->scheduler == FIFO)
 	{
-		while (heap->head->next)
-			heap->head = heap->head->next;
-		heap->head->next = request;
+		heap->queue[1] = request;
+		heap->size++;
+		return ;
 	}
-	if (coder->sim->args->scheduler == EDF)
+	else if (coder->sim->args->scheduler == EDF)
 	{
-		while (heap->head->next && heap->head->deadline > request->deadline)
-			heap->head = heap->head->next;
-		heap->head->next = request;
+		if (heap->queue[0].deadline > request.deadline)
+		{
+			heap->queue[1] = heap->queue[0];
+			heap->queue[0] = request;
+			heap->size++;
+		}
+		else
+		{
+			heap->queue[1] = request;
+			heap->size++;
+		}
 	}
 }
 
 void heap_pop(t_heap *heap)
 {
-	if (!heap)
-		return;
-	heap->head = heap->head->next;
-	heap->head->next = NULL;
+	if (heap->size == 0)
+		return ;
+	heap->queue[0] = heap->queue[1];
+	heap->size--;
 }
 
 void *coder_routine(void *arg)
@@ -72,20 +80,23 @@ void *coder_routine(void *arg)
 	while (1)
 	{
 		pthread_mutex_lock(&coder->sim->mutex);
-		heap_push(coder, coder->sim->queue);
 		// if fifo: compute now - start_time
 		// if edf: compute deadline = last_compile_start + time_to_burnout
 		// add the coder to the priority queue of first
-		while (first->available == 0 && coder == coder->sim->queue->head->coder) // check priority
+		heap_push(coder, &first->priority);
+		while (first->available == 0 && coder != first->priority.queue[0].coder) // check priority
 			pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
+		heap_pop(&first->priority);
 		first->available = 0;
 		// pop coder from the priority queue
 		pthread_mutex_lock(&coder->sim->log_mutex);
 		printf("time: %ld, coder %d has taken dongle %d\n", get_timestamp_ms(coder->sim), coder->id, first->id);
 		pthread_mutex_unlock(&coder->sim->log_mutex);
-		while (second->available == 0 && coder == coder->sim->queue->head->coder)
+		heap_push(coder, &second->priority);
+		while (second->available == 0 && coder != second->priority.queue[0].coder)
 			pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
-		second->available = 0;		
+		heap_pop(&second->priority);
+		second->available = 0;
 		pthread_mutex_lock(&coder->sim->log_mutex);
 		printf("time: %ld, coder %d has taken dongle %d\n", get_timestamp_ms(coder->sim), coder->id, second->id);
 		pthread_mutex_unlock(&coder->sim->log_mutex);
@@ -230,7 +241,6 @@ void	*single_dongle_routine(void *arg)
 	return (NULL);
 }
 
-
 int main(int ac, char **av)
 {
 	if (missing_args(ac))
@@ -243,10 +253,6 @@ int main(int ac, char **av)
 	t_sim sim;
 	gettimeofday(&sim.start_time, NULL);
 	sim.args = &args;
-	sim.queue = malloc(sizeof(t_heap));
-	if (!sim.queue)
-		return (1);
-	sim.queue->head = NULL;
 	sim.coders = malloc(args.number_of_coders * sizeof(t_coder));
 	sim.dongles = malloc(args.number_of_coders * sizeof(t_dongle));
 
@@ -264,6 +270,7 @@ int main(int ac, char **av)
 		sim.dongles[i].hot = 0;
 		sim.dongles[i].users[0] = &sim.coders[i];
 		sim.dongles[i].users[1] = &sim.coders[(i - 1 + args.number_of_coders) % args.number_of_coders];
+		sim.dongles[i].priority.size = 0;
 		
 		sim.coders[i].left = &sim.dongles[i];
 		sim.coders[i].right = &sim.dongles[(i + 1) % args.number_of_coders];

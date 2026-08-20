@@ -36,6 +36,20 @@ typedef struct s_arg
 typedef struct s_sim t_sim;
 typedef struct s_coder t_coder;
 
+typedef struct s_request
+{
+	t_coder 			*coder;
+	long 				arrival;
+	long 				deadline;
+}	t_request;
+
+typedef struct s_heap
+{
+	t_request 	queue[2];
+	int			size;
+}	t_heap;
+
+
 typedef struct s_dongle
 {
 	int			id;
@@ -43,6 +57,7 @@ typedef struct s_dongle
 	int 		available;
 	int 		hot;
 	t_coder 	*users[2];
+	t_heap		priority;
 	t_sim 		*sim;
 }	t_dongle;
 
@@ -57,19 +72,6 @@ typedef struct s_coder
 	t_dongle	*right;
 	t_sim		*sim;
 }	t_coder;
-
-typedef struct s_request
-{
-	t_coder 			*coder;
-	long 				arrival;
-	long 				deadline;
-	struct s_request 	*next;
-}	t_request;
-
-typedef struct s_heap
-{
-	t_request *head;
-}	t_heap;
 
 typedef struct s_sim
 {
