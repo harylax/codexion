@@ -55,7 +55,7 @@ int missing_args(int ac)
 			printf("Error: missing argument(s)\n");
 		else if (ac > 9)
 			printf("Error: too many argument(s)\n");
-		printf("Usage: ./main <number_of_coders> <time_to_burnout> ");
+		printf("Usage: ./codexion <number_of_coders> <time_to_burnout> ");
 		printf("<time_to_compile> <time_to_debug> <time_to_refactor> ");
 		printf("<number_of_compiles_required> <dongle_cooldown> <scheduler>\n");
 		return (1);

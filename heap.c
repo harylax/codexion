@@ -33,9 +33,8 @@ static int fifo_push(t_coder *coder, t_heap *heap)
 	{
 		heap->queue[1] = request;
 		heap->size++;
-		return (1);
 	}
-	return (0);
+	return (1);
 }
 
 static void edf_push(t_coder *coder, t_heap *heap)
