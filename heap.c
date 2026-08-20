@@ -18,9 +18,20 @@ static t_request create_request(t_coder *coder)
 
 static int fifo_push(t_coder *coder, t_heap *heap)
 {
-	if (coder->sim->args->scheduler == FIFO)
+	t_request request;
+
+	if (coder->sim->args->scheduler != FIFO)
+		return (0);
+	request = create_request(coder);
+	if (heap->queue[0].arrival > request.arrival)
 	{
-		heap->queue[1] = create_request(coder);
+		heap->queue[1] = heap->queue[0];
+		heap->queue[0] = request;
+		heap->size++;
+	}
+	else
+	{
+		heap->queue[1] = request;
 		heap->size++;
 		return (1);
 	}

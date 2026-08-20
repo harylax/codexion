@@ -93,5 +93,8 @@ void parse_args(t_arg *args, char **av);
 long get_timestamp_ms(t_sim *sim);
 void heap_push(t_coder *coder, t_heap *heap);
 void heap_pop(t_heap *heap);
+int is_running(t_sim *sim);
+void	log_action(t_coder *coder, char *log);
+
 
 #endif
