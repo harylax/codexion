@@ -1237,3 +1237,461 @@ prend des microsecondes
 La règle mentale la plus importante est :
 
 > **`tv_sec` donne la partie entière du temps en secondes, tandis que `tv_usec` donne la fraction de cette seconde en microsecondes.**
+
+3.2. Comprendre timespec et les nanosecondes
+
+Quand on utilise :
+
+struct timespec ts;
+
+on obtient un instant ou une durée représenté par deux valeurs :
+
+struct timespec
+{
+    time_t tv_sec;
+    long   tv_nsec;
+};
+🔹 tv_sec
+
+Comme avec timeval, tv_sec représente le nombre de secondes depuis l'epoch Unix.
+
+L'epoch Unix correspond au :
+
+1er janvier 1970 à 00:00:00 UTC
+
+Par exemple :
+
+tv_sec = 1780000000
+
+signifie qu'environ 1,78 milliard de secondes se sont écoulées depuis l'epoch.
+
+La différence avec timeval ne se trouve donc pas ici.
+
+🔹 tv_nsec
+
+C'est ici que timespec change.
+
+Avec timeval, on avait :
+
+tv_usec → microsecondes
+
+Avec timespec, on a :
+
+tv_nsec → nanosecondes
+
+Une seconde contient :
+
+1 seconde = 1 000 000 000 nanosecondes
+
+Donc tv_nsec représente les nanosecondes supplémentaires à l'intérieur de la seconde courante.
+
+Par exemple :
+
+tv_sec  = 100
+tv_nsec = 250000000
+
+signifie :
+
+100 secondes + 250 000 000 nanosecondes
+
+soit :
+
+100,25 secondes
+
+On peut visualiser timespec comme ceci :
+
+                     instant
+
+
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+         secondes        fraction de seconde
+          tv_sec              tv_nsec
+             │                   │
+       100 secondes      250000000 ns
+             └─────────┬─────────┘
+                       │
+                  100,25 secondes
+🔹 tv_nsec ne représente pas les nanosecondes depuis l'epoch
+
+C'est exactement la même idée que pour tv_usec.
+
+Ceci :
+
+tv_sec  = 10
+tv_nsec = 250000000
+
+représente :
+
+10,25 secondes depuis l'epoch
+
+et non :
+
+10 secondes
++ 250000000 nanosecondes depuis l'epoch
+
+tv_nsec est uniquement la partie fractionnaire de la seconde courante.
+
+Il est donc normalement compris entre :
+
+0 et 999999999
+🔹 timeval vs timespec
+
+La différence fondamentale peut être résumée ainsi :
+
+timeval
+
+
+tv_sec  → secondes
+tv_usec → microsecondes
+
+
+
+
+timespec
+
+
+tv_sec  → secondes
+tv_nsec → nanosecondes
+
+Les unités sont :
+
+1 seconde
+    │
+    ├── 1 000 millisecondes
+    │
+    ├── 1 000 000 microsecondes
+    │
+    └── 1 000 000 000 nanosecondes
+
+Et donc :
+
+1 milliseconde  = 1 000 microsecondes
+1 microseconde  = 1 000 nanosecondes
+1 milliseconde  = 1 000 000 nanosecondes
+🔹 Pourquoi utiliser timespec ?
+
+L'intérêt principal est d'avoir une précision plus fine.
+
+Avec timeval :
+
+précision → microseconde
+
+Avec timespec :
+
+précision → nanoseconde
+
+Par exemple :
+
+timeval
+tv_sec  = 10
+tv_usec = 123456
+
+
+→ 10,123456 secondes
+
+Avec timespec :
+
+tv_sec  = 10
+tv_nsec = 123456789
+
+
+→ 10,123456789 secondes
+
+timespec permet donc de représenter une fraction de seconde beaucoup plus précise.
+
+⚠️ Cela ne signifie pas nécessairement que l'horloge ou le système est réellement précis à la nanoseconde. La représentation peut avoir une précision de la nanoseconde sans que la mesure réelle ait une résolution de 1 ns.
+
+🔹 Conversion millisecondes → timespec
+
+C'est particulièrement important avec ton code.
+
+Supposons que ton programme reçoit :
+
+2000 ms
+
+On veut obtenir :
+
+2 secondes
+
+On peut écrire :
+
+struct timespec ts;
+
+
+ts.tv_sec = ms / 1000;
+ts.tv_nsec = (ms % 1000) * 1000000;
+
+Pourquoi ?
+
+On sait que :
+
+1 seconde = 1000 ms
+
+Donc :
+
+ms / 1000
+
+donne le nombre de secondes entières.
+
+Et :
+
+ms % 1000
+
+donne les millisecondes restantes.
+
+Il faut ensuite convertir ces millisecondes restantes en nanosecondes :
+
+1 ms = 1 000 000 ns
+
+donc :
+
+(ms % 1000) * 1000000
+🧠 Exemple : 2000 ms
+ts.tv_sec = 2000 / 1000;
+
+donne :
+
+tv_sec = 2
+
+Puis :
+
+ts.tv_nsec = (2000 % 1000) * 1000000;
+
+donne :
+
+tv_nsec = 0
+
+Donc :
+
+tv_sec  = 2
+tv_nsec = 0
+
+ce qui représente :
+
+2 secondes
+🧠 Exemple : 2500 ms
+2500 / 1000 = 2
+2500 % 1000 = 500
+
+On obtient :
+
+tv_sec = 2
+
+Puis :
+
+500 ms × 1 000 000
+= 500 000 000 ns
+
+Donc :
+
+tv_sec  = 2
+tv_nsec = 500000000
+
+Ce qui représente :
+
+2,5 secondes
+🧠 Exemple : 2750 ms
+2750 / 1000 = 2
+2750 % 1000 = 750
+
+Puis :
+
+750 × 1 000 000
+= 750 000 000 ns
+
+Donc :
+
+tv_sec  = 2
+tv_nsec = 750000000
+
+soit :
+
+2,75 secondes
+🔹 Pourquoi utiliser % 1000 ?
+
+C'est une idée importante à comprendre.
+
+Avec :
+
+ts.tv_sec = ms / 1000;
+
+on récupère les secondes entières.
+
+Mais il reste une partie.
+
+Par exemple :
+
+2750 ms
+
+peut être séparé en :
+
+2000 ms + 750 ms
+
+Donc :
+
+2750 ms
+  │
+  ├── 2000 ms → 2 secondes
+  │
+  └── 750 ms  → fraction de seconde
+
+C'est exactement ce que fait :
+
+ms / 1000
+
+pour la première partie et :
+
+ms % 1000
+
+pour la seconde.
+
+Puis on transforme les 750 ms en nanosecondes :
+
+750 ms
+× 1 000 000
+─────────────
+750 000 000 ns
+🔹 timespec et pthread_cond_timedwait
+
+C'est particulièrement utile avec les fonctions pthread qui utilisent timespec, par exemple :
+
+pthread_cond_timedwait(...)
+
+Cette fonction attend jusqu'à un instant précis représenté par un struct timespec.
+
+Par exemple :
+
+struct timespec timeout;
+
+
+clock_gettime(CLOCK_REALTIME, &timeout);
+
+
+timeout.tv_sec += 2;
+
+
+pthread_cond_timedwait(&cond, &mutex, &timeout);
+
+Ici, on dit essentiellement :
+
+"Attends jusqu'à maintenant + 2 secondes."
+
+Il faut faire attention à un point important :
+
+pthread_cond_timedwait() utilise généralement un timestamp absolu, pas simplement une durée.
+
+Donc :
+
+tv_sec  = 1780000000
+tv_nsec = 500000000
+
+signifie un instant précis.
+
+Alors que :
+
+tv_sec  = 2
+tv_nsec = 500000000
+
+représente simplement une durée de :
+
+2,5 secondes
+
+La structure est la même, mais le contexte d'utilisation détermine si tu interprètes la valeur comme un instant ou comme une durée.
+
+🔹 timespec vs timeval
+
+Tu peux retenir ce tableau :
+
+Structure	Secondes	Fraction	Précision
+timeval	tv_sec	tv_usec	microseconde
+timespec	tv_sec	tv_nsec	nanoseconde
+
+Visuellement :
+
+timeval
+
+
+┌──────────────────────┬──────────────────────┐
+│      tv_sec          │       tv_usec        │
+│      secondes        │   microsecondes      │
+└──────────────────────┴──────────────────────┘
+
+
+
+
+timespec
+
+
+┌──────────────────────┬──────────────────────┐
+│      tv_sec          │       tv_nsec        │
+│      secondes        │    nanosecondes      │
+└──────────────────────┴──────────────────────┘
+🎯 À retenir
+                    temps
+
+
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+      partie entière       fraction
+          │                     │
+       tv_sec              tv_nsec
+          │                     │
+       secondes           nanosecondes
+
+Avec timespec :
+
+tv_sec
+  ↓
+secondes
+
+
+tv_nsec
+  ↓
+nanosecondes supplémentaires
+dans la seconde courante
+
+Et les conversions importantes :
+
+1 seconde
+    = 1000 ms
+    = 1 000 000 µs
+    = 1 000 000 000 ns
+
+
+
+
+1 ms
+    = 1000 µs
+    = 1 000 000 ns
+
+
+
+
+1 µs
+    = 1000 ns
+
+Donc pour convertir une durée ms en timespec :
+
+struct timespec get_timespec(long ms)
+{
+    struct timespec ts;
+
+
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (ms % 1000) * 1000000;
+    return ts;
+}
+
+La règle mentale est presque la même que pour timeval :
+
+tv_sec contient les secondes entières, et tv_nsec contient la fraction restante de la seconde, exprimée en nanosecondes.
+
+Et surtout :
+
+timeval  → µs
+timespec → ns
+
+C'est la différence essentielle entre les deux structures.
