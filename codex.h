@@ -84,10 +84,14 @@ typedef struct s_sim
 	struct timeval 	start_time;
 	pthread_mutex_t log_mutex;
 	t_heap 			*queue;
+	pthread_t		monitor_thread;
 }	t_sim;
 
 int missing_args(int ac);
 int check_args(int ac, char **av);
 void parse_args(t_arg *args, char **av);
+long get_timestamp_ms(t_sim *sim);
+void heap_push(t_coder *coder, t_heap *heap);
+void heap_pop(t_heap *heap);
 
 #endif
