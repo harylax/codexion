@@ -8,18 +8,24 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-typedef enum s_scheduler
+typedef enum e_scheduler
 {
 	FIFO,
 	EDF,
 }	t_scheduler;
 
-typedef enum s_state
+typedef enum e_state
 {
 	WORKING,
 	DONE,
 	BURNED_OUT
 }	t_state;
+
+typedef enum e_end
+{
+	SUCCESS,
+	FAIL
+}	t_end;
 
 typedef struct s_arg
 {
@@ -85,6 +91,7 @@ typedef struct s_sim
 	pthread_mutex_t log_mutex;
 	t_heap 			*queue;
 	pthread_t		monitor_thread;
+	t_end			end;
 }	t_sim;
 
 int missing_args(int ac);
@@ -94,7 +101,16 @@ long get_timestamp_ms(t_sim *sim);
 void heap_push(t_coder *coder, t_heap *heap);
 void heap_pop(t_heap *heap);
 int is_running(t_sim *sim);
-void	log_action(t_coder *coder, char *log);
+void log_action(t_coder *coder, char *log);
+int acquire_dongles(t_coder *coder);
+void *coder_routine(void *arg);
+void *dongle_routine(void *arg);
+int init_sim(t_sim *sim, t_arg *arg);
+void destroy_sim(t_sim *sim);
+void *monitor_routine(void *arg);
+int	start_threads(t_sim *sim);
+void join_threads(t_sim *sim);
+void wait_timeout(t_sim *sim, long ms);
 
 
 #endif
