@@ -1,6 +1,6 @@
 #include "codex.h"
 
-static void compile(t_coder *coder)
+static void	compile(t_coder *coder)
 {
 	log_action(coder, "is compiling");
 	pthread_mutex_lock(&coder->sim->mutex);
@@ -14,11 +14,13 @@ static void compile(t_coder *coder)
 
 static void	release_dongles(t_coder *coder)
 {
+	int	compiles_required;
+
 	pthread_mutex_lock(&coder->sim->mutex);
 	coder->left->hot = 1;
-	if (coder->sim->args->number_of_coders > 1)
-		coder->right->hot = 1;			
-	if (coder->compilations_done >= coder->sim->args->number_of_compiles_required)
+	coder->right->hot = 1;
+	compiles_required = coder->sim->args->number_of_compiles_required;
+	if (coder->compilations_done >= compiles_required)
 		coder->state = DONE;
 	pthread_cond_broadcast(&coder->sim->cond);
 	pthread_mutex_unlock(&coder->sim->mutex);
@@ -36,10 +38,10 @@ static void	debug_and_refactor(t_coder *coder)
 	wait_timeout(coder->sim, coder->sim->args->time_to_refactor);
 }
 
-void *coder_routine(void *arg)
+void	*coder_routine(void *arg)
 {
-	t_coder *coder;
-	
+	t_coder	*coder;
+
 	coder = (t_coder *)arg;
 	while (is_running(coder->sim))
 	{
@@ -51,9 +53,6 @@ void *coder_routine(void *arg)
 		if (coder->state == DONE)
 		{
 			pthread_mutex_unlock(&coder->sim->mutex);
-			/////////////!\/////////////
-			log_action(coder, "is done");
-			/////////////!\//////////////
 			break ;
 		}
 		pthread_mutex_unlock(&coder->sim->mutex);

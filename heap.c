@@ -1,11 +1,11 @@
 #include "codex.h"
 
-static t_request create_request(t_coder *coder)
+static t_request	create_request(t_coder *coder)
 {
-	long time_to_burnout;
-	long arrival;
-	long deadline;
-	t_request request;
+	long		time_to_burnout;
+	long		arrival;
+	long		deadline;
+	t_request	request;
 
 	time_to_burnout = (long)coder->sim->args->time_to_burnout;
 	arrival = get_timestamp_ms(coder->sim);
@@ -16,9 +16,9 @@ static t_request create_request(t_coder *coder)
 	return (request);
 }
 
-static int fifo_push(t_coder *coder, t_heap *heap)
+static int	fifo_push(t_coder *coder, t_heap *heap)
 {
-	t_request request;
+	t_request	request;
 
 	if (coder->sim->args->scheduler != FIFO)
 		return (0);
@@ -37,9 +37,9 @@ static int fifo_push(t_coder *coder, t_heap *heap)
 	return (1);
 }
 
-static void edf_push(t_coder *coder, t_heap *heap)
+static void	edf_push(t_coder *coder, t_heap *heap)
 {
-	t_request request;
+	t_request	request;
 
 	if (coder->sim->args->scheduler != EDF)
 		return ;
@@ -57,7 +57,7 @@ static void edf_push(t_coder *coder, t_heap *heap)
 	}
 }
 
-void heap_push(t_coder *coder, t_heap *heap)
+void	heap_push(t_coder *coder, t_heap *heap)
 {
 	if (heap->size == 0)
 	{
@@ -70,7 +70,7 @@ void heap_push(t_coder *coder, t_heap *heap)
 	edf_push(coder, heap);
 }
 
-void heap_pop(t_heap *heap)
+void	heap_pop(t_heap *heap)
 {
 	if (heap->size == 0)
 		return ;

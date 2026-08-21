@@ -1695,3 +1695,153 @@ timeval  → µs
 timespec → ns
 
 C'est la différence essentielle entre les deux structures.
+
+COFFMAN'S COND
+
+L'idée fondamentale est :
+
+Un deadlock peut arriver si les 4 conditions sont présentes simultanément.
+
+Si tu élimines une seule des quatre conditions, le deadlock devient impossible.
+
+1. Mutual Exclusion — Exclusion mutuelle
+
+Une ressource ne peut être utilisée que par un seul thread à la fois.
+
+Dans ton projet Codexion :
+
+Dongle D0
+   │
+   └── peut être utilisé par un seul coder
+
+Si C1 possède D0 :
+
+C1 → D0
+C2 → attente
+
+C2 ne peut pas utiliser D0 simultanément.
+
+En C, ton mutex :
+
+pthread_mutex_lock(&sim->mutex);
+
+est lui-même une ressource en exclusion mutuelle.
+
+Pourquoi c'est nécessaire ?
+
+Sans exclusion mutuelle, plusieurs threads pourraient simplement utiliser la ressource simultanément et il n'y aurait pas de problème de type "j'attends que l'autre me rende la ressource".
+
+2. Hold and Wait — Possession et attente
+
+Un thread possède déjà une ressource tout en attendant d'en obtenir une autre.
+
+C'est exactement le problème qu'on vient de discuter avec tes dongles.
+
+Imagine :
+
+C1 possède D0
+C1 attend D1
+
+Pendant ce temps :
+
+C2 possède D1
+C2 attend D0
+
+On obtient :
+
+C1 ── possède D0 ──► attend D1
+                         ▲
+                         │
+                    possède D1
+                         │
+C2 ── attend D0 ◄────────┘
+
+C'est le fameux :
+
+C1 : hold D0 + wait D1
+C2 : hold D1 + wait D0
+
+💥 Deadlock.
+
+3. No Preemption — Pas de préemption
+
+Une ressource ne peut pas être forcément retirée à un thread.
+
+Le thread qui possède la ressource doit lui-même la libérer.
+
+Pour tes dongles :
+
+C1 possède D0
+
+Le système ne peut pas simplement faire :
+
+"Désolé C1, je prends D0."
+
+Il faut que C1 fasse :
+
+release_dongle(D0);
+
+Dans ton projet, c'est logique : tu ne veux évidemment pas retirer brutalement un dongle à un coder en plein milieu de sa compilation.
+
+4. Circular Wait — Attente circulaire
+
+Il existe une chaîne circulaire de threads qui attendent chacun une ressource détenue par le suivant.
+
+Exemple classique :
+
+C1 possède D0
+C1 attend D1
+
+
+C2 possède D1
+C2 attend D2
+
+
+C3 possède D2
+C3 attend D0
+
+Graphiquement :
+
+      possède
+C1 ──────────► D0
+▲              │
+│              │ attendu
+│              ▼
+D0 ◄────────── C3
+       possède
+
+
+C1 → attend D1
+C2 → attend D2
+C3 → attend D0
+
+Plus simplement :
+
+C1 → attend C2
+C2 → attend C3
+C3 → attend C1
+
+Et personne ne peut avancer.
+
+Les 4 ensemble
+
+Pour avoir un deadlock :
+
+        ┌─────────────────────┐
+        │ 1. Mutual Exclusion │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────┐
+        │ 2. Hold and Wait    │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────┐
+        │ 3. No Preemption    │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────┐
+        │ 4. Circular Wait    │
+        └──────────┬──────────┘
+                   │
+                   ▼
+               DEADLOCK

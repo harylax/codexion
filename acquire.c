@@ -1,23 +1,24 @@
 #include "codex.h"
 
-static void	request_dongle(t_coder *coder, t_dongle *dongle)
+static void	request_dongles(t_coder *coder)
 {
 	pthread_mutex_lock(&coder->sim->mutex);
-	heap_push(coder, &dongle->priority);
+	heap_push(coder, &coder->left->priority);
+	heap_push(coder, &coder->right->priority);
 	pthread_cond_broadcast(&coder->sim->cond);
 	pthread_mutex_unlock(&coder->sim->mutex);
 }
 
-static int waiting_conditions(t_coder *coder, t_dongle *dongle)
+static int	waiting_conditions(t_coder *coder, t_dongle *dongle)
 {
 	if (coder->sim->running == 0)
 		return (0);
-	if (dongle->available == 1 && is_priority(coder, dongle))
+	if (dongle->available == 1 && is_first_in_queue(coder, dongle))
 		return (0);
 	return (1);
 }
 
-static int pick_up_dongle(t_coder *coder, t_dongle *dongle)
+static int	pick_up_dongle(t_coder *coder, t_dongle *dongle)
 {
 	pthread_mutex_lock(&coder->sim->mutex);
 	while (waiting_conditions(coder, dongle))
@@ -34,24 +35,18 @@ static int pick_up_dongle(t_coder *coder, t_dongle *dongle)
 	return (1);
 }
 
-static int take_pair(t_coder *coder, t_dongle *first, t_dongle *second)
+static int	take_pair(t_coder *coder, t_dongle *first, t_dongle *second)
 {
-	request_dongle(coder, first);
+	request_dongles(coder);
 	if (!pick_up_dongle(coder, first))
 		return (0);
-	request_dongle(coder, second);
 	if (!pick_up_dongle(coder, second))
 		return (0);
 	return (1);
 }
 
-int acquire_dongles(t_coder *coder)
+int	acquire_dongles(t_coder *coder)
 {
-	if (coder->sim->args->number_of_coders == 1)
-	{
-		request_dongle(coder, coder->left);
-		return (pick_up_dongle(coder, coder->left));
-	}
 	if (coder->id % 2)
 		return (take_pair(coder, coder->left, coder->right));
 	return (take_pair(coder, coder->right, coder->left));

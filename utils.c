@@ -1,8 +1,8 @@
 #include "codex.h"
 
-int is_running(t_sim *sim)
+int	is_running(t_sim *sim)
 {
-	int running;
+	int	running;
 
 	pthread_mutex_lock(&sim->mutex);
 	running = sim->running;
@@ -17,7 +17,7 @@ void	log_action(t_coder *coder, char *log)
 	pthread_mutex_unlock(&coder->sim->log_mutex);
 }
 
-int is_priority(t_coder *coder, t_dongle *dongle)
+int	is_first_in_queue(t_coder *coder, t_dongle *dongle)
 {
 	if (dongle->priority.size == 0)
 		return (0);

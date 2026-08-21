@@ -1,9 +1,9 @@
 #include "codex.h"
 
-static int is_burnout(t_coder *coder)
+static int	is_burnout(t_coder *coder)
 {
-	long deadline;
-	long now;
+	long	deadline;
+	long	now;
 
 	if (coder->state != WORKING)
 		return (0);
@@ -12,11 +12,12 @@ static int is_burnout(t_coder *coder)
 	return (now >= deadline);
 }
 
-static int check_burnout(t_sim *sim)
+static int	check_burnout(t_sim *sim)
 {
-	int i = 0;
-	int id;
+	int	i;
+	int	id;
 
+	i = 0;
 	while (i < sim->args->number_of_coders)
 	{
 		pthread_mutex_lock(&sim->mutex);
@@ -34,9 +35,9 @@ static int check_burnout(t_sim *sim)
 
 static int	all_done(t_sim *sim)
 {
-	int i;
+	int	i;
 
-	i= 0;
+	i = 0;
 	pthread_mutex_lock(&sim->mutex);
 	while (i < sim->args->number_of_coders)
 	{
@@ -66,9 +67,9 @@ static void	stop_sim(t_sim *sim, t_end end, int burnout_id)
 
 void	*monitor_routine(void *arg)
 {
-	t_sim *sim;
-	int burnout_id;
-	
+	t_sim	*sim;
+	int		burnout_id;
+
 	sim = (t_sim *)arg;
 	while (is_running(sim))
 	{

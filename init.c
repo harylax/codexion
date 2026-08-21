@@ -1,9 +1,13 @@
 #include "codex.h"
 
-static void init_coders(t_sim *sim)
+static void	init_coders(t_sim *sim)
 {
-	int i = 0;
-	while (i < sim->args->number_of_coders)
+	int	i;
+	int	n_coders;
+
+	i = 0;
+	n_coders = sim->args->number_of_coders;
+	while (i < n_coders)
 	{
 		sim->coders[i].sim = sim;
 		sim->coders[i].id = i + 1;
@@ -11,28 +15,32 @@ static void init_coders(t_sim *sim)
 		sim->coders[i].last_compile_start = get_timestamp_ms(sim);
 		sim->coders[i].state = WORKING;
 		sim->coders[i].left = &sim->dongles[i];
-		sim->coders[i].right = &sim->dongles[(i + 1) % sim->args->number_of_coders];
+		sim->coders[i].right = &sim->dongles[(i + 1) % n_coders];
 		i++;
 	}
 }
 
-static void init_dongles(t_sim *sim)
+static void	init_dongles(t_sim *sim)
 {
-	int i = 0;
-	while (i < sim->args->number_of_coders)
+	int	i;
+	int	n_coders;
+
+	i = 0;
+	n_coders = sim->args->number_of_coders;
+	while (i < n_coders)
 	{
 		sim->dongles[i].sim = sim;
 		sim->dongles[i].id = i + 1;
 		sim->dongles[i].available = 1;
 		sim->dongles[i].hot = 0;
 		sim->dongles[i].users[0] = &sim->coders[i];
-		sim->dongles[i].users[1] = &sim->coders[(i - 1 + sim->args->number_of_coders) % sim->args->number_of_coders];
+		sim->dongles[i].users[1] = &sim->coders[(i - 1 + n_coders) % n_coders];
 		sim->dongles[i].priority.size = 0;
 		i++;
 	}
 }
 
-int init_sim(t_sim *sim, t_arg *arg)
+int	init_sim(t_sim *sim, t_arg *arg)
 {
 	sim->running = 1;
 	sim->args = arg;
@@ -53,7 +61,7 @@ int init_sim(t_sim *sim, t_arg *arg)
 	return (1);
 }
 
-void destroy_sim(t_sim *sim)
+void	destroy_sim(t_sim *sim)
 {
 	pthread_mutex_destroy(&sim->mutex);
 	pthread_mutex_destroy(&sim->log_mutex);

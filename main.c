@@ -1,6 +1,21 @@
 #include "codex.h"
 
-int main(int ac, char **av)
+static void	stop_threads(t_sim *sim)
+{
+	pthread_mutex_lock(&sim->mutex);
+	sim->running = 0;
+	pthread_mutex_unlock(&sim->mutex);
+	pthread_cond_broadcast(&sim->cond);
+}
+
+static void	log_error_threads(t_sim *sim)
+{
+	pthread_mutex_lock(&sim->log_mutex);
+	printf("Error: failed to create threads\n");
+	pthread_mutex_unlock(&sim->log_mutex);
+}
+
+int	main(int ac, char **av)
 {
 	t_arg	args;
 	t_sim	sim;
@@ -15,9 +30,8 @@ int main(int ac, char **av)
 	}
 	if (!start_threads(&sim))
 	{
-		printf("Error: failed to create threads\n");
-		sim.running = 0;
-		pthread_cond_broadcast(&sim.cond);
+		log_error_threads(&sim);
+		stop_threads(&sim);
 		join_threads(&sim);
 		destroy_sim(&sim);
 		return (1);

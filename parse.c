@@ -1,8 +1,8 @@
 #include "codex.h"
 
-static int check_non_digit(char *s)
+static int	check_non_digit(char *s)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	while (s[i] == ' ' || (s[i] >= 9 && s[i] <= 13))
@@ -18,11 +18,11 @@ static int check_non_digit(char *s)
 	return (0);
 }
 
-static int is_overflow(char *s)
+static int	is_overflow(char *s)
 {
-	int i;
-	long res;
-	int sign;
+	int			i;
+	long long	res;
+	int			sign;
 
 	i = 0;
 	res = 0;
@@ -47,7 +47,7 @@ static int is_overflow(char *s)
 	return (0);
 }
 
-int missing_args(int ac)
+int	missing_args(int ac)
 {
 	if (ac != 9)
 	{
@@ -63,10 +63,10 @@ int missing_args(int ac)
 	return (0);
 }
 
-int check_args(int ac, char **av)
+int	check_args(int ac, char **av)
 {
-	int err;
-	int i;
+	int	err;
+	int	i;
 
 	err = 0;
 	i = 1;
@@ -91,7 +91,7 @@ int check_args(int ac, char **av)
 	return (err);
 }
 
-void parse_args(t_arg *args, char **av)
+void	parse_args(t_arg *args, char **av)
 {
 	args->number_of_coders = atoi(av[1]);
 	args->time_to_burnout = atoi(av[2]);

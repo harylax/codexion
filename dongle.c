@@ -11,7 +11,7 @@ static int	waiting_conditions(t_dongle *dongle)
 	return (1);
 }
 
-static void wait_for_hot_dongle(t_dongle *dongle)
+static void	wait_for_hot_dongle(t_dongle *dongle)
 {
 	pthread_mutex_lock(&dongle->sim->mutex);
 	while (waiting_conditions(dongle))
@@ -19,7 +19,7 @@ static void wait_for_hot_dongle(t_dongle *dongle)
 	pthread_mutex_unlock(&dongle->sim->mutex);
 }
 
-static void enable_dongle(t_dongle *dongle)
+static void	enable_dongle(t_dongle *dongle)
 {
 	pthread_mutex_lock(&dongle->sim->mutex);
 	dongle->hot = 0;
@@ -40,13 +40,13 @@ static int	cool_dongle(t_dongle *dongle)
 
 void	*dongle_routine(void *arg)
 {
-	t_dongle *dongle;
-	
+	t_dongle	*dongle;
+
 	dongle = (t_dongle *)arg;
 	while (is_running(dongle->sim))
 	{
 		if (!cool_dongle(dongle))
-			break;
+			break ;
 		pthread_mutex_lock(&dongle->sim->mutex);
 		if (dongle->users[0]->state == DONE && dongle->users[1]->state == DONE)
 		{
