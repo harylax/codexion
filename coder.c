@@ -47,11 +47,16 @@ void *coder_routine(void *arg)
 			break ;
 		compile(coder);
 		release_dongles(coder);
+		pthread_mutex_lock(&coder->sim->mutex);
 		if (coder->state == DONE)
 		{
+			pthread_mutex_unlock(&coder->sim->mutex);
+			/////////////!\/////////////
 			log_action(coder, "is done");
+			/////////////!\//////////////
 			break ;
 		}
+		pthread_mutex_unlock(&coder->sim->mutex);
 		if (!is_running(coder->sim))
 			break ;
 		debug_and_refactor(coder);

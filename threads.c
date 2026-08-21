@@ -31,7 +31,6 @@ int	start_threads(t_sim *sim)
 void	join_threads(t_sim *sim)
 {
 	int	i;
-	int	n;
 
 	if (!sim->count.monitor_thread)
 		return ;

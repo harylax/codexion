@@ -8,10 +8,19 @@ static void	request_dongle(t_coder *coder, t_dongle *dongle)
 	pthread_mutex_unlock(&coder->sim->mutex);
 }
 
+static int waiting_conditions(t_coder *coder, t_dongle *dongle)
+{
+	if (coder->sim->running == 0)
+		return (0);
+	if (dongle->available == 1 && is_priority(coder, dongle))
+		return (0);
+	return (1);
+}
+
 static int pick_up_dongle(t_coder *coder, t_dongle *dongle)
 {
 	pthread_mutex_lock(&coder->sim->mutex);
-	while (coder->sim->running && (dongle->available == 0 || coder != dongle->priority.queue[0].coder))
+	while (waiting_conditions(coder, dongle))
 		pthread_cond_wait(&coder->sim->cond, &coder->sim->mutex);
 	if (!coder->sim->running)
 	{

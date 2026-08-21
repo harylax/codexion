@@ -79,6 +79,13 @@ typedef struct s_coder
 	t_sim		*sim;
 }	t_coder;
 
+typedef struct s_count
+{
+	int	monitor_thread;
+	int coder_threads;
+	int dongle_threads;
+}	t_count;
+
 typedef struct s_sim
 {
 	int				running;
@@ -92,6 +99,7 @@ typedef struct s_sim
 	t_heap 			*queue;
 	pthread_t		monitor_thread;
 	t_end			end;
+	t_count			count;
 }	t_sim;
 
 int missing_args(int ac);
@@ -111,6 +119,6 @@ void *monitor_routine(void *arg);
 int	start_threads(t_sim *sim);
 void join_threads(t_sim *sim);
 void wait_timeout(t_sim *sim, long ms);
-
+int is_priority(t_coder *coder, t_dongle *dongle);
 
 #endif

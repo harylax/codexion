@@ -1,35 +1,46 @@
 #include "codex.h"
 
-static int	cool_dongle(t_dongle *dongle)
+static int	waiting_conditions(t_dongle *dongle)
+{
+	if (dongle->sim->running == 0)
+		return (0);
+	if (dongle->hot == 1)
+		return (0);
+	if (dongle->users[0]->state == DONE && dongle->users[1]->state == DONE)
+		return (0);
+	return (1);
+}
+
+static void wait_for_hot_dongle(t_dongle *dongle)
 {
 	pthread_mutex_lock(&dongle->sim->mutex);
-	if (dongle->sim->args->number_of_coders == 1)
-	{
-		while (dongle->sim->running && dongle->hot == 0)
-			pthread_cond_wait(&dongle->sim->cond, &dongle->sim->mutex);
-	}
-	else
-	{
-		while (dongle->sim->running && dongle->hot == 0
-			&& (dongle->users[0]->state != DONE
-			|| dongle->users[1]->state != DONE))
-			pthread_cond_wait(&dongle->sim->cond, &dongle->sim->mutex);
-	}
+	while (waiting_conditions(dongle))
+		pthread_cond_wait(&dongle->sim->cond, &dongle->sim->mutex);
 	pthread_mutex_unlock(&dongle->sim->mutex);
-	if (!is_running(dongle->sim))
-		return (0);
-	wait_timeout(dongle->sim, dongle->sim->args->dongle_cooldown);
+}
+
+static void enable_dongle(t_dongle *dongle)
+{
 	pthread_mutex_lock(&dongle->sim->mutex);
 	dongle->hot = 0;
 	dongle->available = 1;
+	pthread_cond_broadcast(&dongle->sim->cond);
 	pthread_mutex_unlock(&dongle->sim->mutex);
+}
+
+static int	cool_dongle(t_dongle *dongle)
+{
+	wait_for_hot_dongle(dongle);
+	if (!is_running(dongle->sim))
+		return (0);
+	wait_timeout(dongle->sim, dongle->sim->args->dongle_cooldown);
+	enable_dongle(dongle);
 	return (1);
 }
 
 void	*dongle_routine(void *arg)
 {
 	t_dongle *dongle;
-	int	both_done;
 	
 	dongle = (t_dongle *)arg;
 	while (is_running(dongle->sim))
@@ -37,20 +48,12 @@ void	*dongle_routine(void *arg)
 		if (!cool_dongle(dongle))
 			break;
 		pthread_mutex_lock(&dongle->sim->mutex);
-		if (dongle->sim->args->number_of_coders == 1)
-			both_done = dongle->users[0]->state == DONE;
-		else
-			both_done = (dongle->users[0]->state == DONE
-					&& dongle->users[1]->state == DONE);
-		pthread_cond_broadcast(&dongle->sim->cond);
-		pthread_mutex_unlock(&dongle->sim->mutex);
-		if (both_done)
-		{		
-			pthread_mutex_lock(&dongle->sim->log_mutex);
-			printf("%ld dongle %d is out of use\n", get_timestamp_ms(dongle->sim), dongle->id);
-			pthread_mutex_unlock(&dongle->sim->log_mutex);
-			break;
+		if (dongle->users[0]->state == DONE && dongle->users[1]->state == DONE)
+		{
+			pthread_mutex_unlock(&dongle->sim->mutex);
+			break ;
 		}
+		pthread_mutex_unlock(&dongle->sim->mutex);
 	}
 	return (NULL);
 }
