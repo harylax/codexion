@@ -16,3 +16,10 @@ void	log_action(t_coder *coder, char *log)
 	printf("%ld %d %s\n", get_timestamp_ms(coder->sim), coder->id, log);
 	pthread_mutex_unlock(&coder->sim->log_mutex);
 }
+
+int is_priority(t_coder *coder, t_dongle *dongle)
+{
+	if (dongle->priority.size == 0)
+		return (0);
+	return (coder == dongle->priority.queue[0].coder);
+}
