@@ -79,7 +79,7 @@ static int	check_args(int ac, char **av)
 		else if (is_overflow(av[i]) == 1)
 			printf("Error: '%s' is too big\n", av[i]);
 		else if (atoi(av[i]) < 0 || is_overflow(av[i]) == -1)
-			printf("Error: '%s' is not a positive integer\n", av[i]);
+			printf("Error: '%s' is a negative integer\n", av[i]);
 		i++;
 	}
 	if (strcmp(av[ac - 1], "fifo") && strcmp(av[ac - 1], "edf"))
@@ -95,14 +95,14 @@ int	parse_args(t_arg *args, int ac, char **av)
 {
 	if (missing_args(ac) || check_args(ac, av))
 		return (0);
-	if (atoi(av[1]) == 0)
+	if (atoi(av[1]) == 0 || atoi(av[2]) == 0 || atoi(av[6]) == 0)
 	{
-		printf("Error: the simulation needs at least one coder\n");
-		return (0);
-	}
-	if (atoi(av[6]) == 0)
-	{
-		printf("Error: the simulation needs at least one compile\n");
+		if (atoi(av[1]) == 0)
+			printf("Error: the simulation needs at least one coder\n");
+		if (atoi(av[2]) == 0)
+			printf("Error: the simulation needs at least time to burnout\n");
+		if (atoi(av[6]) == 0)
+			printf("Error: the simulation needs at least one compile\n");
 		return (0);
 	}
 	args->number_of_coders = atoi(av[1]);
