@@ -40,6 +40,32 @@ static void	init_dongles(t_sim *sim)
 	}
 }
 
+static int	init_mutex_cond(t_sim *sim)
+{
+	if (pthread_mutex_init(&sim->mutex, NULL))
+	{
+		printf("Error: failed to init mutex\n");
+		free(sim->coders);
+		free(sim->dongles);
+		return (0);
+	}
+	if (pthread_mutex_init(&sim->log_mutex, NULL))
+	{
+		printf("Error: failed to init log_mutex\n");
+		free(sim->coders);
+		free(sim->dongles);
+		return (0);
+	}
+	if (pthread_cond_init(&sim->cond, NULL))
+	{
+		printf("Error: failed to init condition variable\n");
+		free(sim->coders);
+		free(sim->dongles);
+		return (0);
+	}
+	return (1);
+}
+
 int	init_sim(t_sim *sim, t_arg *arg)
 {
 	sim->running = 1;
@@ -49,15 +75,17 @@ int	init_sim(t_sim *sim, t_arg *arg)
 	sim->dongles = malloc(arg->number_of_coders * sizeof(t_dongle));
 	if (!sim->coders || !sim->dongles)
 	{
-		free(sim->coders);
-		free(sim->dongles);
+		if (sim->coders)
+			free(sim->coders);
+		if (sim->dongles)
+			free(sim->dongles);
+		printf("Error: failed to malloc\n");
 		return (0);
 	}
 	init_coders(sim);
 	init_dongles(sim);
-	pthread_mutex_init(&sim->mutex, NULL);
-	pthread_mutex_init(&sim->log_mutex, NULL);
-	pthread_cond_init(&sim->cond, NULL);
+	if (!init_mutex_cond(sim))
+		return (0);
 	return (1);
 }
 

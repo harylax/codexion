@@ -2,7 +2,7 @@
 
 # Codexion
 
-*Master the race for resources befor the deadline masters you*
+*Master the race for resources before the deadline masters you*
 
 ## Description
 
@@ -55,6 +55,12 @@ Clone the repository.
 
 ```bash
 git clone https://github.com/harylax/codexion.git
+```
+
+Enter the coders/ folder before compilation.
+
+```bash
+cd coders/
 ```
 
 ### Compilation
@@ -130,15 +136,15 @@ make re      # rebuild from scratch
 
 ## Blocking cases handled
 
-- **Deadlock prevention:** coders pick up their dongles in a different order depending on parity of their id. Odd coders take left-then-right and even coders take right-then-left. This breaks the circular wait condition from Coffman's four conditions.
+- **Deadlock prevention:** coders pick up their dongles in a different order depending on parity of their id. Odd coders take left-then-right and even coders take right-then-left. This breaks the circular wait condition from Coffman's four conditions (mutual exclusion, hold and wait, no preemption, circular wait).
 - **Starvation prevention:** each dongle keeps a small priority queue of requests and grants access according to the chosen `scheduler` (`fifo` or `edf`). So a coder can never be starved indefinitely as long as the parameters given make sense.
 - **Dongle cooldown:** a dedicated dongle thread makes sure a dongle stays unavailable for `dongle_cooldown` ms after being released, before it can be taken again.
 - **Burnout detection:** a separate monitor thread checks coder states regularly and stops the simulation within 10 ms of the actual burnout deadline.
-- **Log serialization:** all log lines are printed while holding a dedicated logging mutex, so two messages can never interleave on the same line.
+- **Log serialization:** all log lines are printed while holding a dedicated logging mutex, so two messages can never appear mixed on the same line.
 
 ## Thread synchronization mechanisms
 
 - `pthread_mutex_t sim->mutex` protects all shared simulation state: coder states, dongle availability/heat, and the per-dongle request queues. Every read or write of this state happens under the lock.
-- `pthread_cond_t sim->cond` is used to avoid busy-waiting: coders wait on it while a dongle they need is unavailable or not yet their turn, and dongle threads wait on it while cooling down. Any state change that could unblock another thread (a dongle becoming available, a coder finishing a compile, the simulation stopping) is followed by `pthread_cond_broadcast`.
+- `pthread_cond_t sim->cond` prevents a thread from checking repeatedly a condition when it has to wait: coders wait on it while a dongle they need is unavailable or not yet their turn, and dongle threads wait on it while not heating yet. Any state change that could unblock another thread (a dongle becoming available, a coder finishing a compile, the simulation stopping) is followed by `pthread_cond_broadcast`.
 - A separate `pthread_mutex_t sim->log_mutex` protects `printf` calls only, so that logging never has to be serialized through the same lock as the simulation logic (avoiding unnecessary contention).
 - Race conditions are avoided because every access to shared fields (`coder->state`, `dongle->available`, `dongle->hot`, the request heap) is always performed under `sim->mutex`; the monitor thread reads coder states the same way, so it can never observe a half-updated state.
