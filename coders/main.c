@@ -20,9 +20,8 @@ int	main(int ac, char **av)
 	t_arg	args;
 	t_sim	sim;
 
-	if (missing_args(ac) || check_args(ac, av))
+	if (!parse_args(&args, ac, av))
 		return (1);
-	parse_args(&args, av);
 	if (!init_sim(&sim, &args))
 	{
 		printf("Error: failed to malloc\n");

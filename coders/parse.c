@@ -47,7 +47,7 @@ static int	is_overflow(char *s)
 	return (0);
 }
 
-int	missing_args(int ac)
+static int	missing_args(int ac)
 {
 	if (ac != 9)
 	{
@@ -63,7 +63,7 @@ int	missing_args(int ac)
 	return (0);
 }
 
-int	check_args(int ac, char **av)
+static int	check_args(int ac, char **av)
 {
 	int	err;
 	int	i;
@@ -72,13 +72,13 @@ int	check_args(int ac, char **av)
 	i = 1;
 	while (i < ac - 1)
 	{
-		if (check_non_digit(av[i]) || is_overflow(av[i]) || atoi(av[i]) <= 0)
+		if (check_non_digit(av[i]) || is_overflow(av[i]) || atoi(av[i]) < 0)
 			err = 1;
 		if (check_non_digit(av[i]))
 			printf("Error: '%s' is not a valid integer\n", av[i]);
 		else if (is_overflow(av[i]) == 1)
 			printf("Error: '%s' is too big\n", av[i]);
-		else if (atoi(av[i]) <= 0 || is_overflow(av[i]) == -1)
+		else if (atoi(av[i]) < 0 || is_overflow(av[i]) == -1)
 			printf("Error: '%s' is not a positive integer\n", av[i]);
 		i++;
 	}
@@ -91,8 +91,20 @@ int	check_args(int ac, char **av)
 	return (err);
 }
 
-void	parse_args(t_arg *args, char **av)
+int	parse_args(t_arg *args, int ac, char **av)
 {
+	if (missing_args(ac) || check_args(ac, av))
+		return (0);
+	if (atoi(av[1]) == 0)
+	{
+		printf("Error: the simulation needs at least one coder\n");
+		return (0);
+	}
+	if (atoi(av[6]) == 0)
+	{
+		printf("Error: the simulation needs at least one compile\n");
+		return (0);
+	}
 	args->number_of_coders = atoi(av[1]);
 	args->time_to_burnout = atoi(av[2]);
 	args->time_to_compile = atoi(av[3]);
@@ -104,4 +116,5 @@ void	parse_args(t_arg *args, char **av)
 		args->scheduler = FIFO;
 	else
 		args->scheduler = EDF;
+	return (1);
 }
