@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   codex.h                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/08/24 07:48:51 by haryandr          #+#    #+#             */
+/*   Updated: 2026/08/24 08:26:10 by haryandr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef CODEX_H
 # define CODEX_H
 
@@ -57,13 +69,15 @@ typedef struct s_heap
 
 typedef struct s_dongle
 {
-	int			id;
-	pthread_t	thread;
-	int			available;
-	int			hot;
-	t_coder		*users[2];
-	t_heap		priority;
-	t_sim		*sim;
+	int				id;
+	pthread_t		thread;
+	int				available;
+	int				hot;
+	t_coder			*users[2];
+	t_heap			priority;
+	pthread_mutex_t mutex;
+	pthread_cond_t	cond;
+	t_sim			*sim;
 }	t_dongle;
 
 typedef struct s_coder

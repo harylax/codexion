@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   coder.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/08/24 07:48:31 by haryandr          #+#    #+#             */
+/*   Updated: 2026/08/24 09:48:28 by haryandr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "codex.h"
 
 static void	compile(t_coder *coder)
@@ -16,10 +28,18 @@ static void	release_dongles(t_coder *coder)
 {
 	int	compiles_required;
 
-	pthread_mutex_lock(&coder->sim->mutex);
+	pthread_mutex_lock(&coder->left->mutex);
 	coder->left->hot = 1;
+	pthread_cond_broadcast(&coder->left->cond);
+	pthread_mutex_unlock(&coder->left->mutex);
+
+	pthread_mutex_lock(&coder->right->mutex);
 	coder->right->hot = 1;
-	compiles_required = coder->sim->args->number_of_compiles_required;
+	pthread_cond_broadcast(&coder->right->cond);
+	pthread_mutex_unlock(&coder->right->mutex);
+
+	compiles_required = coder->sim->args->number_of_compiles_required;	
+	pthread_mutex_lock(&coder->sim->mutex);
 	if (coder->compilations_done >= compiles_required)
 		coder->state = DONE;
 	pthread_cond_broadcast(&coder->sim->cond);
@@ -49,6 +69,9 @@ void	*coder_routine(void *arg)
 			break ;
 		compile(coder);
 		release_dongles(coder);
+		if (!is_running(coder->sim))
+			break ;
+		debug_and_refactor(coder);
 		pthread_mutex_lock(&coder->sim->mutex);
 		if (coder->state == DONE)
 		{
@@ -56,9 +79,6 @@ void	*coder_routine(void *arg)
 			break ;
 		}
 		pthread_mutex_unlock(&coder->sim->mutex);
-		if (!is_running(coder->sim))
-			break ;
-		debug_and_refactor(coder);
 	}
 	return (NULL);
 }
