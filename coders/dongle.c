@@ -1,16 +1,5 @@
 #include "codex.h"
 
-// static int	waiting_conditions(t_dongle *dongle)
-// {
-// 	if (dongle->sim->running == 0)
-// 		return (0);
-// 	if (dongle->hot == 1)
-// 		return (0);
-// 	if (dongle->users[0]->state == DONE && dongle->users[1]->state == DONE)
-// 		return (0);
-// 	return (1);
-// }
-
 static int	waiting_conditions(t_dongle *dongle)
 {
 	if (dongle->hot == 1)

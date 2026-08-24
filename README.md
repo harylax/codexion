@@ -91,16 +91,16 @@ make re      # rebuild from scratch
 ./codexion number_of_coders time_to_burnout time_to_compile time_to_debug time_to_refactor number_of_compiles_required dongle_cooldown scheduler
 ```
 
-| Argument | Description |
-|---|---|
-| `number_of_coders` | Number of coders (and dongles) |
-| `time_to_burnout` | Max time (ms) a coder can go without starting a compile |
-| `time_to_compile` | Time (ms) spent compiling |
-| `time_to_debug` | Time (ms) spent debugging |
-| `time_to_refactor` | Time (ms) spent refactoring |
-| `number_of_compiles_required` | Compiles needed per coder to end the simulation successfully |
-| `dongle_cooldown` | Time (ms) a dongle stays unavailable after being released |
-| `scheduler` | `fifo` or `edf` — how dongles arbitrate between competing requests |
+| Argument 						| Description 															|
+|-------------------------------|-----------------------------------------------------------------------|
+| `number_of_coders` 			| Number of coders (and dongles) 										|
+| `time_to_burnout` 			| Max time (ms) a coder can go without starting a compile 				|
+| `time_to_compile` 			| Time (ms) spent compiling 											|
+| `time_to_debug` 				| Time (ms) spent debugging 											|
+| `time_to_refactor` 			| Time (ms) spent refactoring 											|
+| `number_of_compiles_required` | Compiles needed per coder to end the simulation successfully 			|
+| `dongle_cooldown` 			| Time (ms) a dongle stays unavailable after being released 			|
+| `scheduler` 					| `fifo` or `edf` — how dongles arbitrate between competing requests	|
 
 #### Example:
 
