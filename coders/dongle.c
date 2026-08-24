@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   dongle.c                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/08/24 07:49:17 by haryandr          #+#    #+#             */
-/*   Updated: 2026/08/24 09:26:01 by haryandr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "codex.h"
 
 // static int	waiting_conditions(t_dongle *dongle)
@@ -42,9 +30,9 @@ static void	wait_for_hot_dongle(t_dongle *dongle)
 	pthread_mutex_lock(&dongle->mutex);
 	while (waiting_conditions(dongle))
 	{
-		if (is_running(dongle->sim))
+		if (is_running(dongle->sim) == 0)
 			break ;
-		pthread_cond_wait(&dongle->sim->cond, &dongle->sim->mutex);
+		pthread_cond_wait(&dongle->cond, &dongle->mutex);
 	}
 	pthread_mutex_unlock(&dongle->mutex);
 }

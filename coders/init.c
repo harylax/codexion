@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   init.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/08/24 07:50:01 by haryandr          #+#    #+#             */
-/*   Updated: 2026/08/24 09:26:40 by haryandr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "codex.h"
 
 static void	init_coders(t_sim *sim)
@@ -54,19 +42,23 @@ static void	init_dongles(t_sim *sim)
 
 static int	init_dongles_mutex_cond(t_sim *sim)
 {
-	int	i = 0;
+	int	i;
+
+	i = 0;
 	while (i < sim->args->number_of_coders)
 	{
 		if (pthread_mutex_init(&sim->dongles[i].mutex, NULL))
 		{
-			printf("Error: failed to init dongle %d mutex\n", sim->dongles[i].id);
+			printf("Error: failed to init dongle");
+			printf(" %d mutex\n", sim->dongles[i].id);
 			free(sim->coders);
 			free(sim->dongles);
 			return (0);
 		}
 		if (pthread_cond_init(&sim->dongles[i].cond, NULL))
 		{
-			printf("Error: failed to init dongle %d cond\n", sim->dongles[i].id);
+			printf("Error: failed to init dongle");
+			printf(" %d cond\n", sim->dongles[i].id);
 			free(sim->coders);
 			free(sim->dongles);
 			return (0);
@@ -125,20 +117,4 @@ int	init_sim(t_sim *sim, t_arg *arg)
 	if (!init_dongles_mutex_cond(sim))
 		return (0);
 	return (1);
-}
-
-void	destroy_sim(t_sim *sim)
-{
-	pthread_mutex_destroy(&sim->mutex);
-	pthread_mutex_destroy(&sim->log_mutex);
-	pthread_cond_destroy(&sim->cond);
-	int i = 0;
-	while (i < sim->args->number_of_coders)
-	{
-		pthread_mutex_destroy(&sim->dongles[i].mutex);
-		pthread_cond_destroy(&sim->dongles[i].cond);
-		i++;
-	}
-	free(sim->coders);
-	free(sim->dongles);
 }

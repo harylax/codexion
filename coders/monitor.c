@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   monitor.c                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/08/24 07:51:20 by haryandr          #+#    #+#             */
-/*   Updated: 2026/08/24 10:11:18 by haryandr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "codex.h"
 
 static int	is_burnout(t_coder *coder)
@@ -66,16 +54,18 @@ static int	all_done(t_sim *sim)
 
 static void	stop_sim(t_sim *sim, t_end end, int burnout_id)
 {
+	int	i;
+
 	pthread_mutex_lock(&sim->mutex);
 	sim->running = 0;
+	pthread_cond_broadcast(&sim->cond);
 	if (end == FAIL)
 	{
 		sim->coders[burnout_id - 1].state = BURNED_OUT;
 		log_action(&sim->coders[burnout_id - 1], "burned out");
 	}
-	pthread_cond_broadcast(&sim->cond);
 	pthread_mutex_unlock(&sim->mutex);
-	int i = 0;
+	i = 0;
 	while (i < sim->args->number_of_coders)
 	{
 		pthread_mutex_lock(&sim->dongles[i].mutex);

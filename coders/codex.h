@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   codex.h                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/08/24 07:48:51 by haryandr          #+#    #+#             */
-/*   Updated: 2026/08/24 08:26:10 by haryandr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef CODEX_H
 # define CODEX_H
 
@@ -75,7 +63,7 @@ typedef struct s_dongle
 	int				hot;
 	t_coder			*users[2];
 	t_heap			priority;
-	pthread_mutex_t mutex;
+	pthread_mutex_t	mutex;
 	pthread_cond_t	cond;
 	t_sim			*sim;
 }	t_dongle;
@@ -130,5 +118,6 @@ int		start_threads(t_sim *sim);
 void	join_threads(t_sim *sim);
 void	wait_timeout(t_sim *sim, long ms);
 int		is_first_in_queue(t_coder *coder, t_dongle *dongle);
+void	request_dongle(t_coder *coder, t_dongle *dongle);
 
 #endif

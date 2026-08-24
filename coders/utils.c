@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   utils.c                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: haryandr <haryandr@student.42antananari    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/08/24 07:53:05 by haryandr          #+#    #+#             */
-/*   Updated: 2026/08/24 07:53:08 by haryandr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "codex.h"
 
 int	is_running(t_sim *sim)
@@ -34,4 +22,12 @@ int	is_first_in_queue(t_coder *coder, t_dongle *dongle)
 	if (dongle->priority.size == 0)
 		return (0);
 	return (coder == dongle->priority.queue[0].coder);
+}
+
+void	request_dongle(t_coder *coder, t_dongle *dongle)
+{
+	pthread_mutex_lock(&dongle->mutex);
+	heap_push(coder, &dongle->priority);
+	pthread_cond_broadcast(&dongle->cond);
+	pthread_mutex_unlock(&dongle->mutex);
 }

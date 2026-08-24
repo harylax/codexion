@@ -8,13 +8,13 @@
 
 ### Presentation
 
-Codexion is a multithreaded simulation based on the classic dining philosophers problem. One or more **coders** sit around a co-working hub and take turns **compiling**, **debugging**, and **refactoring**. To compile, a coder needs two **USB dongles** (one on the left, one on the right), and there are exactly as many dongles as coders.
+Codexion is a multithreaded simulation based on the classic dining philosophers problem. One or more **coders** sit around a co-working hub and repeatedly **compile**, **debug**, and **refactor**. To compile, a coder must hold two **USB dongles** at the same time (left and right). There are exactly as many dongles as coders.
 
 ### Goal
 
 The goal of this project is to build a solid multithreaded simulation in C, using POSIX threads (`pthread`), mutexes, condition variables, and precise timing.
 
-The point of the project is to learn concurrent programming, mainly:
+The main learning objectives are:
 
 - Sharing resources (the USB dongles) between threads
 - Synchronizing threads correctly
@@ -22,30 +22,34 @@ The point of the project is to learn concurrent programming, mainly:
 - Avoiding deadlocks and starvation
 - Handling timing and state monitoring properly
 
-The simulation has to run correctly under concurrent access, never deadlock, never starve a coder, and correctly detect burnout.
+The simulation has to run correctly under concurrent access, never deadlock, never starve a coder (when parameters are feasible), and correctly detect burnout.
 
 ### Overview
 
-The project is built around three (03) main structures:
+The project is built around four (04) main structures:
 
 👤 **Coders:**
-- Each is represented by a POSIX thread that shares the same setup.
-- The same routine is compiling with two dongles, debugging and refactoring in loop. 
-- They sit around a circular working table.
-- Each must use two dongles to compile, the one on their left, and the other on their right.
-- A coder shares the dongle of their right neighbor.
+- Each is represented by a POSIX thread.
+- They sit in a circle.
+- Each coder has a dongle on his left.
+- To compile, a coder must acquire two dongles, his own and his right neighbor.
+- After compiling, the coder releases the dongles, then debugs and refactors before trying to compile again.
+- If only one coder is present, there is only one dongle; the coder cannot compile and will eventually burn out.
 
 🔌 **Dongles:**
-- Each dongle and other shared resources such as states are protected by a global mutex and global condition variable.
-- Simultaneous access to critical ressources leads to data race.
-- Each dongle also has a thread with the same setup.
-- The thread waits for the dongle to be released after a compile, then makes it cool down.
-- The access to a dongle follows a priority queue, either `fifo` (first arrival) or `edf` (closest to deadline).
+- Shared resources protected by their own mutex and condition variable.
+- After being released, a dongle becomes hot and stays unavailable for `dongle_cooldown` milliseconds.
+- A dedicated dongle thread is responsible for the cooldown period.
+- Access is arbitrated by a small priority queue (size <= 2) according to the chosen scheduler (`fifo` or `edf`).
 
 🕵️‍♂️ **Monitor:**
 - A global thread that watches every coder to detect **burnout**.  
-- If a coder does not start compiling again within `time_to_burnout` milliseconds of their last compile, he burns out and the simulation stops.
+- If a coder has not started a new compile within `time_to_burnout` milliseconds of their last compile (or the start of the simulation), he burns out and the simulation stops.
 - The simulation stops successfully once every coder has compiled at least `number_of_compiles_required` times.
+
+💻 **Simulation:**
+- Holds all shared states: arrays of coders and dongles, arguments, start timestamp, running flag, end status, and the logging mutex.
+- Provides the global condition variable used to wake threads when the simulation ends.
 
 ## Instructions
 
@@ -57,10 +61,10 @@ Clone the repository.
 git clone https://github.com/harylax/codexion.git
 ```
 
-Enter the coders/ folder before compilation.
+Enter the codexion/coders/ folder before compilation.
 
 ```bash
-cd coders/
+cd codexion/coders/
 ```
 
 ### Compilation
@@ -130,21 +134,39 @@ make re      # rebuild from scratch
 
 - POSIX Threads basics: https://www.codequoi.com/en/threads-mutexes-and-concurrent-programming-in-c/
 - POSIX Threads Programming (LLNL tutorial): https://hpc-tutorials.llnl.gov/posix/
-- `man pthreads`, `man pthread_create`, `man pthread_join`
+- `man pthreads`, `man pthread_create`, `man pthread_join`, `man gettimeofday`
 
-**AI usage:** to quickly get a grasp of the concepts involved in the project.
+**AI usage:**
+AI was used as a learning aid to quickly understand the concurrency concepts involved in the project (threads, mutexes, condition variables, deadlocks, starvation, Coffman conditions, and scheduling policies).
 
 ## Blocking cases handled
 
-- **Deadlock prevention:** coders pick up their dongles in a different order depending on parity of their id. Odd coders take left-then-right and even coders take right-then-left. This breaks the circular wait condition from Coffman's four conditions (mutual exclusion, hold and wait, no preemption, circular wait).
-- **Starvation prevention:** each dongle keeps a small priority queue of requests and grants access according to the chosen `scheduler` (`fifo` or `edf`). So a coder can never be starved indefinitely as long as the parameters given make sense.
-- **Dongle cooldown:** a dedicated dongle thread makes sure a dongle stays unavailable for `dongle_cooldown` ms after being released, before it can be taken again.
-- **Burnout detection:** a separate monitor thread checks coder states regularly and stops the simulation within 10 ms of the actual burnout deadline.
-- **Log serialization:** all log lines are printed while holding a dedicated logging mutex, so two messages can never appear mixed on the same line.
+- **Deadlock prevention:**
+Coders acquire dongles in different orders according to the parity of their id: odd coders take left then right, even coders take right then left. This breaks the circular-wait condition of Coffman’s four conditions.
+- **Starvation prevention:**
+Each dongle maintains a small priority queue of pending requests and grants access according to the selected scheduler (`fifo` or `edf`). As long as the given parameters are feasible, no coder is starved indefinitely.
+- **Dongle cooldown:**
+A dedicated dongle thread is responsible for keeping a dongle unavailable for exactly `dongle_cooldown` ms after it has been released.
+- **Burnout detection:**
+A separate monitor thread checks coder states every millisecond and stops the simulation. The "burned out" message is printed within 10 ms of the actual deadline.
+- **Log serialization:**
+All log lines are printed while holding a dedicated logging mutex (sim->log_mutex), guaranteeing that two messages never interleave on the same line.
 
 ## Thread synchronization mechanisms
 
-- `pthread_mutex_t sim->mutex` protects all shared simulation state: coder states, dongle availability/heat, and the per-dongle request queues. Every read or write of this state happens under the lock.
-- `pthread_cond_t sim->cond` prevents a thread from checking repeatedly a condition when it has to wait: coders wait on it while a dongle they need is unavailable or not yet their turn, and dongle threads wait on it while not heating yet. Any state change that could unblock another thread (a dongle becoming available, a coder finishing a compile, the simulation stopping) is followed by `pthread_cond_broadcast`.
-- A separate `pthread_mutex_t sim->log_mutex` protects `printf` calls only, so that logging never has to be serialized through the same lock as the simulation logic (avoiding unnecessary contention).
-- Race conditions are avoided because every access to shared fields (`coder->state`, `dongle->available`, `dongle->hot`, the request heap) is always performed under `sim->mutex`; the monitor thread reads coder states the same way, so it can never observe a half-updated state.
+- `pthread_mutex_t dongle->mutex`
+Protects all per-dongle state: `available`, `hot`, and the priority queue (`t_heap`). Every read or write of these fields is performed under this lock.
+- `pthread_cond_t dongle->cond`
+Used by coders waiting for a dongle to become available and to be first in the queue, and by the dongle thread waiting for the dongle to become hot. Any state change that may unblock a waiter is followed by `pthread_cond_broadcast`.
+- `pthread_mutex_t sim->mutex`
+Protects global simulation state: `running`, coder states (`WORKING` / `DONE` / `BURNED_OUT`), `last_compile_start`, `compilations_done`, and the end status.
+- `pthread_cond_t sim->cond`
+Used to wake all threads when the simulation is stopped (burnout or success).
+- `pthread_mutex_t sim->log_mutex`
+Protects `printf` calls only, so that log lines never get mixed.
+
+### Race conditions are avoided because:
+
+- Dongle-specific fields are always accessed under the corresponding `dongle->mutex`.
+- Global simulation fields and coder states are always accessed under `sim->mutex`.
+- The monitor thread only reads coder state under `sim->mutex`, so it never observes a partially updated state.
