@@ -15,14 +15,32 @@ int	start_threads(t_sim *sim)
 	i = 0;
 	while (i < n)
 	{
-		if (pthread_create(&sim->coders[i].thread, NULL,
-				coder_routine, &sim->coders[i]))
-			return (0);
-		sim->count.coder_threads++;
-		if (pthread_create(&sim->dongles[i].thread, NULL,
-				dongle_routine, &sim->dongles[i]))
-			return (0);
-		sim->count.dongle_threads++;
+		if (sim->coders->id % 2 != 0)
+		{
+			if (pthread_create(&sim->coders[i].thread, NULL,
+					coder_routine, &sim->coders[i]))
+				return (0);
+			sim->count.coder_threads++;
+			if (pthread_create(&sim->dongles[i].thread, NULL,
+					dongle_routine, &sim->dongles[i]))
+				return (0);
+			sim->count.dongle_threads++;
+		}
+		i++;
+	}
+	while (i < n)
+	{
+		if (sim->coders->id % 2 == 0)
+		{
+			if (pthread_create(&sim->coders[i].thread, NULL,
+					coder_routine, &sim->coders[i]))
+				return (0);
+			sim->count.coder_threads++;
+			if (pthread_create(&sim->dongles[i].thread, NULL,
+					dongle_routine, &sim->dongles[i]))
+				return (0);
+			sim->count.dongle_threads++;
+		}
 		i++;
 	}
 	return (1);
